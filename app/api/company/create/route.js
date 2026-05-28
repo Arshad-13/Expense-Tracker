@@ -6,9 +6,7 @@ import {
   generateVerificationCode,
   sendCompanyVerificationEmail,
 } from '@/lib/email'
-
-// Temporary storage for verification codes (use Redis in production)
-const verificationCodes = new Map()
+import { setVerificationData } from '@/lib/verification-store'
 
 export async function POST(request) {
   try {
@@ -38,7 +36,7 @@ export async function POST(request) {
     const verificationCode = generateVerificationCode()
     
     // Store verification data temporarily (expires in 10 minutes)
-    verificationCodes.set(email, {
+    setVerificationData(email, {
       code: verificationCode,
       companyName,
       password,

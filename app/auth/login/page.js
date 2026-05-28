@@ -12,9 +12,23 @@ import { Spinner } from '@/components/ui/spinner'
 import { useToast } from '@/hooks/use-toast'
 import { Building2, Mail, Lock, AlertCircle, Eye, EyeOff, UserPlus } from 'lucide-react'
 
+const DEMO_CREDENTIALS = [
+  { label: 'Admin', role: 'ADMIN', email: 'admin@demo.com' },
+  { label: 'Director', role: 'DIRECTOR', email: 'director@demo.com' },
+  { label: 'Finance', role: 'FINANCE', email: 'finance@demo.com' },
+  { label: 'Manager', role: 'MANAGER', email: 'manager@demo.com' },
+  { label: 'Employee', role: 'EMPLOYEE', email: 'employee@demo.com' },
+  { label: 'Sales', role: 'EMPLOYEE', email: 'sales@demo.com' },
+  { label: 'Ops', role: 'EMPLOYEE', email: 'ops@demo.com' },
+  { label: 'Intern', role: 'EMPLOYEE', email: 'intern@demo.com' },
+]
+
+const DEMO_COMPANY_ID = 'DEMO-ACME'
+const DEMO_PASSWORD = 'Demo@1234'
+
 export default function LoginPage() {
   const [formData, setFormData] = useState({
-    companyId: '',
+    companyId: DEMO_COMPANY_ID,
     email: '',
     password: ''
   })
@@ -83,6 +97,17 @@ export default function LoginPage() {
     }
   }
 
+  const applyDemoCredentials = (email) => {
+    setFormData({
+      companyId: DEMO_COMPANY_ID,
+      email,
+      password: DEMO_PASSWORD,
+    })
+    setShowPassword(false)
+    setError('')
+    setErrors({})
+  }
+
   const handleCredentialsLogin = async (e) => {
     e.preventDefault()
     
@@ -128,14 +153,8 @@ export default function LoginPage() {
         // Redirect based on role
         if (userRole === 'ADMIN') {
           router.push('/admin/dashboard')
-        } else if (userRole === 'MANAGER') {
-          router.push('/dashboard/manager')
-        } else if (userRole === 'FINANCE') {
-          router.push('/dashboard/finance')
-        } else if (userRole === 'DIRECTOR') {
-          router.push('/dashboard/director')
         } else {
-          router.push('/dashboard') // Default employee dashboard
+          router.push('/dashboard')
         }
       }
     } catch (error) {
@@ -162,9 +181,43 @@ export default function LoginPage() {
           <CardDescription>
             Enter your company credentials to access the expense management system
           </CardDescription>
+          <p className="text-xs text-muted-foreground mt-2">
+            Demo company ID: <span className="font-medium">{DEMO_COMPANY_ID}</span>
+          </p>
         </CardHeader>
         <form onSubmit={handleCredentialsLogin}>
           <CardContent className="space-y-4">
+            <div className="rounded-lg border bg-muted/30 p-4">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div>
+                  <p className="text-sm font-medium">Quick demo logins</p>
+                  <p className="text-xs text-muted-foreground">
+                    Click any role to auto-fill the form.
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {DEMO_CREDENTIALS.map((account) => (
+                  <Button
+                    key={account.email}
+                    type="button"
+                    variant="outline"
+                    className="justify-start text-left h-auto py-2 px-3"
+                    onClick={() => applyDemoCredentials(account.email)}
+                    disabled={loading}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{account.label}</span>
+                      <span className="text-[11px] text-muted-foreground">{account.email}</span>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-3">
+                Password for all demo users: <span className="font-medium">{DEMO_PASSWORD}</span>
+              </p>
+            </div>
+
             {/* Error Message */}
             {error && (
               <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">

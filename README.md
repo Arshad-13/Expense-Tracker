@@ -75,8 +75,11 @@ GOOGLE_CLIENT_SECRET="your_google_client_secret"
 # Generate Prisma client
 npx prisma generate
 
-# Create and migrate database
-npx prisma migrate dev --name init
+# Sync schema to the database
+npx prisma db push
+
+# Seed demo data for local development
+npm run db:seed
 
 # Optional: View database
 npx prisma studio

@@ -1,8 +1,8 @@
-'use server';
+"use server";
 
-import { prisma } from '@/lib/prisma'; // This will be created later
+import prisma from '@/lib/prisma';
 
-export async function processDraftExpenses(expenses) {
+export async function processDraftExpenses(expenses, { companyId, submittedById } = {}) {
   try {
     if (!Array.isArray(expenses) || expenses.length === 0) {
       return {
@@ -10,17 +10,27 @@ export async function processDraftExpenses(expenses) {
         message: 'No expenses provided'
       };
     }
+    if (!companyId || !submittedById) {
+      return {
+        success: false,
+        message: 'Missing companyId or submittedById for creating expenses'
+      };
+    }
 
-    // TODO: Replace with actual Prisma createMany operation
-    const createdExpenses = await prisma.expense.createMany({
-      data: expenses.map(expense => ({
-        transactionDate: expense.transaction_date,
-        totalAmount: expense.total_amount,
-        category: expense.category || 'General',
-        lineItems: expense.line_items || [],
-        status: 'DRAFT'
-      }))
-    });
+    // Map incoming draft shape to Prisma Expense fields
+    const data = expenses.map(expense => ({
+      companyId,
+      submittedById,
+      amount: parseFloat(expense.total_amount) || 0,
+      currency: expense.currency || 'USD',
+      category: expense.category || 'General',
+      description: expense.description || null,
+      date: expense.transaction_date ? new Date(expense.transaction_date) : new Date(),
+      status: 'PENDING',
+      items: expense.line_items && expense.line_items.length ? expense.line_items : undefined,
+    }));
+
+    const createdExpenses = await prisma.expense.createMany({ data });
 
     return {
       success: true,

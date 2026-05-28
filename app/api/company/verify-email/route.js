@@ -2,9 +2,7 @@ import { NextResponse } from 'next/server'
 import { hash } from 'bcryptjs'
 import prisma from '@/lib/prisma'
 import { generateCompanyId, sendCompanyIdEmail } from '@/lib/email'
-
-// Import the verification codes from create route (in production, use Redis)
-const verificationCodes = new Map()
+import { deleteVerificationData, getVerificationData } from '@/lib/verification-store'
 
 export async function POST(request) {
   try {
@@ -19,7 +17,7 @@ export async function POST(request) {
     }
 
     // Get stored verification data
-    const storedData = verificationCodes.get(email)
+    const storedData = getVerificationData(email)
 
     if (!storedData) {
       return NextResponse.json(
@@ -30,7 +28,7 @@ export async function POST(request) {
 
     // Check if code expired
     if (Date.now() > storedData.expiresAt) {
-      verificationCodes.delete(email)
+      deleteVerificationData(email)
       return NextResponse.json(
         { error: 'Verification code has expired' },
         { status: 400 }
@@ -83,8 +81,17 @@ export async function POST(request) {
       },
     })
 
+    await prisma.companySetting.create({
+      data: {
+        companyId: company.id,
+        approvalRequired: true,
+        managerApprovalFirst: true,
+        sequentialApproval: true,
+      },
+    })
+
     // Clear verification data
-    verificationCodes.delete(email)
+    deleteVerificationData(email)
 
     // Send company ID email
     await sendCompanyIdEmail(email, storedData.companyName, companyId)

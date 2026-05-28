@@ -1,14 +1,14 @@
-import { withAuth } from "next-auth/middleware"
-import { NextResponse } from "next/server"
+import { withAuth } from 'next-auth/middleware'
+import { NextResponse } from 'next/server'
 
 export default withAuth(
-  function middleware(req) {
+  function proxy(req) {
     const { pathname } = req.nextUrl
     const token = req.nextauth.token
 
-    // If user is authenticated and trying to access auth pages, redirect to home
+    // If user is authenticated and trying to access auth pages, redirect to the dashboard
     if (token && (pathname.startsWith('/auth/login') || pathname.startsWith('/auth/register'))) {
-      return NextResponse.redirect(new URL('/', req.url))
+      return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
     // If user is not authenticated and trying to access protected pages
@@ -20,16 +20,11 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: () => true, // Allow all requests to reach the middleware
+      authorized: () => true,
     },
   }
 )
 
 export const config = {
-  matcher: [
-    '/auth/login',
-    '/auth/register', 
-    '/dashboard/:path*',
-    // Add other protected routes here as needed
-  ]
+  matcher: ['/auth/login', '/auth/register', '/dashboard/:path*', '/company/login'],
 }

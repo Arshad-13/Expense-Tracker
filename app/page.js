@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { getServerSession } from 'next-auth'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { 
   Receipt, 
   ArrowRight, 
@@ -25,7 +27,13 @@ import {
   Award
 } from 'lucide-react'
 
-export default function Home() {
+export default async function Home() {
+  const session = await getServerSession(authOptions)
+  const isAuthed = !!session?.user
+  const ctaHref = isAuthed ? '/dashboard' : '/auth/register'
+  const demoHref = isAuthed ? '/expense' : '/auth/login'
+  const finalCtaHref = isAuthed ? '/dashboard' : '/auth/register'
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
@@ -51,16 +59,16 @@ export default function Home() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link href="/auth/register">
+              <Link href={ctaHref}>
                 <Button size="lg" className="text-lg px-10 py-6 bg-accent hover:bg-accent/90 text-white shadow-2xl shadow-accent/50 hover:shadow-accent/70 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 relative group">
-                  <span className="relative z-10">Get Started for Free</span>
+                  <span className="relative z-10">{isAuthed ? 'Go to Dashboard' : 'Get Started for Free'}</span>
                   <ArrowRight className="ml-2 h-5 w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
                   <div className="absolute inset-0 bg-gradient-to-r from-accent to-accent/80 rounded-lg blur opacity-50 group-hover:opacity-75 transition-opacity" />
                 </Button>
               </Link>
-              <Link href="/auth/login">
+              <Link href={demoHref}>
                 <Button size="lg" variant="outline" className="text-lg px-10 py-6 bg-white/10 border-2 border-white/30 text-white hover:bg-white/20 hover:border-white/50 backdrop-blur-sm shadow-xl transition-all duration-300 transform hover:scale-105">
-                  Watch Demo
+                  {isAuthed ? 'Start Expense' : 'Watch Demo'}
                   <svg className="ml-2 h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
                   </svg>
@@ -597,9 +605,9 @@ export default function Home() {
               Join hundreds of companies already saving time and money with ExpenseFlow.
             </p>
             
-            <Link href="/auth/register">
+            <Link href={finalCtaHref}>
               <Button size="lg" className="text-lg px-12 py-6 bg-accent hover:bg-accent/90 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
-                Sign Up and Start Your Free Trial
+                {isAuthed ? 'Open Dashboard' : 'Sign Up and Start Your Free Trial'}
                 <ArrowRight className="ml-2 h-6 w-6" />
               </Button>
             </Link>

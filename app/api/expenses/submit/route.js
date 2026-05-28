@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import prisma from '@/lib/prisma'
+import { approvalWorkflowService } from '@/lib/approval-workflow'
 
 export async function POST(req) {
   try {
@@ -44,22 +45,28 @@ export async function POST(req) {
     if (Number.isNaN(dateInput.getTime())) return NextResponse.json({ error: 'Invalid date' }, { status: 400 })
 
     // Optional line items payload from manual form
-    const items = payload.items || payload.lineItems || null
+    let items = payload.items || payload.lineItems || null
+    if (typeof items === 'string') {
+      try {
+        items = JSON.parse(items)
+      } catch {
+        items = null
+      }
+    }
 
-    const expense = await prisma.expense.create({
-      data: {
-        companyId: session.user.companyId,
-        submittedById: session.user.id,
-        amount: amount,
+    const expense = await approvalWorkflowService.submitExpense(
+      {
+        amount,
+        amountInCompany: amount,
         currency,
         category,
         description: description || null,
         date: dateInput,
-        status: 'PENDING',
-        isManager: isManager,
-        items: items ? items : undefined,
+        isManager,
+        items: items || undefined,
       },
-    })
+      session.user.id,
+    )
 
     return NextResponse.json({ id: expense.id, status: expense.status }, { status: 201 })
   } catch (err) {
