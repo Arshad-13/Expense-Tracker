@@ -49,24 +49,6 @@ export default function Navbar() {
             >
               Features
             </Link>
-            <Link
-              href="#pricing"
-              className="font-playfair text-foreground/80 hover:text-primary transition-colors font-medium"
-            >
-              Pricing
-            </Link>
-            <Link
-              href="#about"
-              className="font-playfair text-foreground/80 hover:text-primary transition-colors font-medium"
-            >
-              About Us
-            </Link>
-            <Link
-              href="#contact"
-              className="font-playfair text-foreground/80 hover:text-primary transition-colors font-medium"
-            >
-              Contact
-            </Link>
             
             {status === 'loading' ? (
               <div className="flex items-center space-x-4">
@@ -127,27 +109,6 @@ export default function Navbar() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Features
-              </Link>
-              <Link
-                href="#pricing"
-                className="font-playfair block px-3 py-2 text-base font-medium text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Pricing
-              </Link>
-              <Link
-                href="#about"
-                className="font-playfair block px-3 py-2 text-base font-medium text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About Us
-              </Link>
-              <Link
-                href="#contact"
-                className="font-playfair block px-3 py-2 text-base font-medium text-foreground hover:text-primary transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Contact
               </Link>
               
               {status === 'loading' ? (

@@ -6,7 +6,8 @@ const CACHE_DURATION = 60 * 60 * 1000 // 1 hour in milliseconds
 
 export async function GET(request, { params }) {
   try {
-    const baseCurrency = params.base?.toUpperCase()
+    const { base } = await params
+    const baseCurrency = base?.toUpperCase()
     
     if (!baseCurrency) {
       return NextResponse.json(
@@ -65,7 +66,8 @@ export async function GET(request, { params }) {
 // Also support POST for bulk currency conversion
 export async function POST(request, { params }) {
   try {
-    const baseCurrency = params.base?.toUpperCase()
+    const { base } = await params
+    const baseCurrency = base?.toUpperCase()
     const body = await request.json()
     const { amount, targetCurrencies = [] } = body
 

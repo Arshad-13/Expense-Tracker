@@ -166,8 +166,8 @@ export default function OnboardingFlow() {
             duration: 5000,
           })
           
-          // Redirect directly to admin dashboard
-          router.push('/admin/dashboard')
+          // Redirect directly to unified dashboard
+          router.push('/dashboard')
         } else {
           toast({
             title: "Company Created",

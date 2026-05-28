@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useSession, SessionProvider } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,7 +30,7 @@ import {
   XCircle,
 } from 'lucide-react'
 
-function AdminDashboardClient() {
+export default function AdminDashboard() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -56,6 +56,8 @@ function AdminDashboardClient() {
       router.push('/company/login')
     } else if (status === 'authenticated') {
       fetchEmployees()
+      const interval = setInterval(fetchEmployees, 10000)
+      return () => clearInterval(interval)
     }
   }, [status, router])
 
@@ -157,6 +159,31 @@ function AdminDashboardClient() {
     }
   }
 
+  const handleDeleteEmployee = async (employeeId) => {
+    if (!confirm('Are you sure you want to delete this employee?')) return
+    setLoading(true)
+    setMessage({ type: '', text: '' })
+
+    try {
+      const response = await fetch(`/api/admin/employees/${employeeId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete employee')
+      }
+
+      setMessage({ type: 'success', text: 'Employee deleted successfully!' })
+      fetchEmployees()
+    } catch (error) {
+      setMessage({ type: 'error', text: error.message })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleExport = () => {
     if (filteredEmployees.length === 0) return
     const headers = ['Name', 'Email', 'Role', 'Manager']
@@ -212,265 +239,235 @@ function AdminDashboardClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-secondary/30 to-background">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-primary to-primary/90 border-b border-white/10">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="p-4 sm:p-6 lg:p-8">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20 p-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-accent/20 p-3 rounded-xl">
-                <Building2 className="h-6 w-6 text-accent" />
-              </div>
-              <div>
-                <h1 className="font-playfair text-2xl md:text-3xl font-bold text-white">
-                  Admin Dashboard
-                </h1>
-                <p className="text-white/70 text-sm">
-                  {session?.user?.email} • Company ID: {session?.user?.companyId || 'N/A'}
-                </p>
-              </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Total Employees</p>
+              <p className="text-3xl font-bold text-foreground">{employees.length}</p>
             </div>
-            <Button
-              variant="outline"
-              className="bg-white/10 border-white/30 text-white hover:bg-white/20"
-              onClick={() => router.push('/')}
-            >
-              Home
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Total Employees</p>
-                <p className="text-3xl font-bold text-foreground">{employees.length}</p>
-              </div>
-              <div className="bg-accent/20 p-3 rounded-xl">
-                <Users className="h-6 w-6 text-accent" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Managers</p>
-                <p className="text-3xl font-bold text-foreground">{managers.length}</p>
-              </div>
-              <div className="bg-primary/20 p-3 rounded-xl">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20 p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Active Users</p>
-                <p className="text-3xl font-bold text-foreground">
-                  {employees.filter(e => e.isActive).length}
-                </p>
-              </div>
-              <div className="bg-blue-500/20 p-3 rounded-xl">
-                <CheckCircle className="h-6 w-6 text-blue-400" />
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        {/* Message Display */}
-        {message.text && (
-          <div
-            className={`mb-6 p-4 rounded-lg border ${
-              message.type === 'success'
-                ? 'bg-accent/10 border-accent/30 text-accent'
-                : 'bg-destructive/10 border-destructive/30 text-destructive'
-            }`}
-          >
-            {message.text}
-          </div>
-        )}
-
-        {/* Employee Management Card */}
-        <Card className="bg-white dark:bg-card border-border shadow-xl">
-          <div className="p-6 border-b border-border">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="font-playfair text-2xl font-bold text-foreground mb-1">
-                  Employee Management
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Add and manage your team members
-                </p>
-              </div>
-              <Button
-                onClick={() => setShowAddModal(true)}
-                className="bg-accent hover:bg-accent/90 text-white"
-              >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Add Employee
-              </Button>
-            </div>
-
-            {/* Search and Filter */}
-            <div className="flex flex-col sm:flex-row gap-4 mt-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search employees..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <div className="w-full sm:w-[180px]">
-                <Select
-                  value={roleFilter}
-                  onValueChange={setRoleFilter}
-                >
-                  <SelectTrigger className="w-full bg-white dark:bg-background">
-                    <Filter className="mr-2 h-4 w-4" />
-                    <SelectValue placeholder="All Roles" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All Roles</SelectItem>
-                    <SelectItem value="EMPLOYEE">Employee</SelectItem>
-                    <SelectItem value="MANAGER">Manager</SelectItem>
-                    <SelectItem value="FINANCE">Finance</SelectItem>
-                    <SelectItem value="DIRECTOR">Director</SelectItem>
-                    <SelectItem value="ADMIN">Admin</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <Button variant="outline" className="sm:w-auto bg-white dark:bg-background" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
+            <div className="bg-accent/20 p-3 rounded-xl">
+              <Users className="h-6 w-6 text-accent" />
             </div>
           </div>
+        </Card>
 
-          {/* Employee Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-secondary/50 border-b border-border">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
-                    Manager
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-semibold text-foreground uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredEmployees.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
-                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">No employees found</p>
-                      <Button
-                        onClick={() => setShowAddModal(true)}
-                        variant="link"
-                        className="text-accent mt-2"
-                      >
-                        Add your first employee
-                      </Button>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredEmployees.map((employee) => (
-                    <tr key={employee.id} className="hover:bg-secondary/30 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-semibold">
-                            {employee.name?.charAt(0).toUpperCase() || '?'}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-foreground">
-                              {employee.name || 'No Name'}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-foreground">{employee.email}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getRoleBadgeColor(
-                            employee.role
-                          )}`}
-                        >
-                          {employee.role}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                        {employee.managerName || 'No Manager'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSendPassword(employee.id, employee.email)}
-                            disabled={sendingPassword === employee.id}
-                            className="text-accent border-accent/30 hover:bg-accent/10"
-                          >
-                            {sendingPassword === employee.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <>
-                                <Send className="h-4 w-4 mr-1" />
-                                Send Password
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setEditingEmployee({
-                              id: employee.id,
-                              name: employee.name,
-                              email: employee.email,
-                              role: employee.role,
-                              managerId: employee.managerId || ''
-                            })}
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteEmployee(employee.id)}
-                            className="text-destructive hover:text-destructive/80"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Managers</p>
+              <p className="text-3xl font-bold text-foreground">{managers.length}</p>
+            </div>
+            <div className="bg-primary/20 p-3 rounded-xl">
+              <Users className="h-6 w-6 text-primary" />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Active Users</p>
+              <p className="text-3xl font-bold text-foreground">
+                {employees.filter(e => e.isActive).length}
+              </p>
+            </div>
+            <div className="bg-blue-500/20 p-3 rounded-xl">
+              <CheckCircle className="h-6 w-6 text-blue-400" />
+            </div>
           </div>
         </Card>
       </div>
+
+      {/* Message Display */}
+      {message.text && (
+        <div
+          className={`mb-6 p-4 rounded-lg border ${
+            message.type === 'success'
+              ? 'bg-accent/10 border-accent/30 text-accent'
+              : 'bg-destructive/10 border-destructive/30 text-destructive'
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
+      {/* Employee Management Card */}
+      <Card className="bg-white dark:bg-card border-border shadow-xl">
+        <div className="p-6 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="font-playfair text-2xl font-bold text-foreground mb-1">
+                Employee Management
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Add and manage your team members
+              </p>
+            </div>
+            <Button
+              onClick={() => setShowAddModal(true)}
+              className="bg-accent hover:bg-accent/90 text-white"
+            >
+              <UserPlus className="mr-2 h-4 w-4" />
+              Add Employee
+            </Button>
+          </div>
+
+          {/* Search and Filter */}
+          <div className="flex flex-col sm:flex-row gap-4 mt-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search employees..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="w-full sm:w-[180px]">
+              <Select
+                value={roleFilter}
+                onValueChange={setRoleFilter}
+              >
+                <SelectTrigger className="w-full bg-white dark:bg-background">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALL">All Roles</SelectItem>
+                  <SelectItem value="EMPLOYEE">Employee</SelectItem>
+                  <SelectItem value="MANAGER">Manager</SelectItem>
+                  <SelectItem value="FINANCE">Finance</SelectItem>
+                  <SelectItem value="DIRECTOR">Director</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button variant="outline" className="sm:w-auto bg-white dark:bg-background" onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </div>
+        </div>
+
+        {/* Employee Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-secondary/50 border-b border-border">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  User
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Role
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Manager
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-semibold text-foreground uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filteredEmployees.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">No employees found</p>
+                    <Button
+                      onClick={() => setShowAddModal(true)}
+                      variant="link"
+                      className="text-accent mt-2"
+                    >
+                      Add your first employee
+                    </Button>
+                  </td>
+                </tr>
+              ) : (
+                filteredEmployees.map((employee) => (
+                  <tr key={employee.id} className="hover:bg-secondary/30 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center text-accent font-semibold">
+                          {employee.name?.charAt(0).toUpperCase() || '?'}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-foreground">
+                            {employee.name || 'No Name'}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-foreground">{employee.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full border ${getRoleBadgeColor(
+                          employee.role
+                        )}`}
+                      >
+                        {employee.role}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {employee.managerName || 'No Manager'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSendPassword(employee.id, employee.email)}
+                          disabled={sendingPassword === employee.id}
+                          className="text-accent border-accent/30 hover:bg-accent/10"
+                        >
+                          {sendingPassword === employee.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <Send className="h-4 w-4 mr-1" />
+                              Send Password
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingEmployee({
+                            id: employee.id,
+                            name: employee.name,
+                            email: employee.email,
+                            role: employee.role,
+                            managerId: employee.managerId || ''
+                          })}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteEmployee(employee.id)}
+                          className="text-destructive hover:text-destructive/80"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       {/* Add Employee Modal */}
       {showAddModal && (
@@ -688,13 +685,5 @@ function AdminDashboardClient() {
         </div>
       )}
     </div>
-  )
-}
-
-export default function AdminDashboardPage() {
-  return (
-    <SessionProvider basePath="/api/auth">
-      <AdminDashboardClient />
-    </SessionProvider>
   )
 }

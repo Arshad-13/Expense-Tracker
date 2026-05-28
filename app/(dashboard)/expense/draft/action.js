@@ -1,6 +1,8 @@
 "use server";
 
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function processDraftExpenses(expenses, { companyId, submittedById } = {}) {
   try {
@@ -45,5 +47,36 @@ export async function processDraftExpenses(expenses, { companyId, submittedById 
       message: error.message,
       error: process.env.NODE_ENV === 'development' ? error.stack : undefined
     };
+  }
+}
+
+export async function getPendingExpenses() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.id) {
+      return { success: false, message: 'Unauthorized' };
+    }
+
+    const expenses = await prisma.expense.findMany({
+      where: {
+        submittedById: session.user.id,
+        status: { in: ['PENDING', 'IN_PROGRESS'] }
+      },
+      orderBy: { date: 'desc' },
+      select: {
+        id: true,
+        amount: true,
+        currency: true,
+        category: true,
+        description: true,
+        date: true,
+        status: true,
+      }
+    });
+
+    return { success: true, expenses };
+  } catch (error) {
+    console.error('Error fetching pending expenses:', error);
+    return { success: false, message: error.message };
   }
 }

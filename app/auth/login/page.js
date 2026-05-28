@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
+import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/hooks/use-toast'
-import { Building2, Mail, Lock, AlertCircle, Eye, EyeOff, UserPlus } from 'lucide-react'
+import { Building2, Mail, Lock, AlertCircle, Eye, EyeOff, UserPlus, Loader2 } from 'lucide-react'
 
 const DEMO_CREDENTIALS = [
   { label: 'Admin', role: 'ADMIN', email: 'admin@demo.com' },
@@ -38,7 +39,7 @@ export default function LoginPage() {
   const [errors, setErrors] = useState({})
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { data: session, status, update } = useSession()
+  const { data: session, status } = useSession()
   const { toast } = useToast()
 
   // Pre-fill company ID from URL params and redirect if authenticated
@@ -106,6 +107,10 @@ export default function LoginPage() {
     setShowPassword(false)
     setError('')
     setErrors({})
+    toast({
+      title: "Credentials Loaded",
+      description: `Filled fields with demo credentials.`,
+    })
   }
 
   const handleCredentialsLogin = async (e) => {
@@ -146,16 +151,7 @@ export default function LoginPage() {
           description: "Welcome back!",
         })
         
-        // Get session to determine redirect based on role
-        const session = await getSession()
-        const userRole = session?.user?.role
-        
-        // Redirect based on role
-        if (userRole === 'ADMIN') {
-          router.push('/admin/dashboard')
-        } else {
-          router.push('/dashboard')
-        }
+        router.push('/dashboard')
       }
     } catch (error) {
       setError('Something went wrong. Please try again.')
@@ -169,172 +165,235 @@ export default function LoginPage() {
     }
   }
 
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent/5 via-accent/10 to-accent/20 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-12 h-12 bg-accent rounded-full flex items-center justify-center">
-            <Building2 className="h-6 w-6 text-white" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Sign In</CardTitle>
-          <CardDescription>
-            Enter your company credentials to access the expense management system
-          </CardDescription>
-          <p className="text-xs text-muted-foreground mt-2">
-            Demo company ID: <span className="font-medium">{DEMO_COMPANY_ID}</span>
-          </p>
-        </CardHeader>
-        <form onSubmit={handleCredentialsLogin}>
-          <CardContent className="space-y-4">
-            <div className="rounded-lg border bg-muted/30 p-4">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <div>
-                  <p className="text-sm font-medium">Quick demo logins</p>
-                  <p className="text-xs text-muted-foreground">
-                    Click any role to auto-fill the form.
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {DEMO_CREDENTIALS.map((account) => (
-                  <Button
-                    key={account.email}
-                    type="button"
-                    variant="outline"
-                    className="justify-start text-left h-auto py-2 px-3"
-                    onClick={() => applyDemoCredentials(account.email)}
-                    disabled={loading}
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-sm font-medium">{account.label}</span>
-                      <span className="text-[11px] text-muted-foreground">{account.email}</span>
-                    </div>
-                  </Button>
-                ))}
-              </div>
-              <p className="text-[11px] text-muted-foreground mt-3">
-                Password for all demo users: <span className="font-medium">{DEMO_PASSWORD}</span>
-              </p>
+    <div className="min-h-screen flex flex-col md:flex-row bg-background">
+      {/* Left Panel: Hero and Quick demo credentials (visible on desktop) */}
+      <div className="hidden md:flex md:w-5/12 lg:w-4/12 bg-gradient-to-br from-primary via-primary/95 to-primary/90 text-primary-foreground p-8 flex-col justify-between relative overflow-hidden">
+        {/* Background Orbs */}
+        <div className="absolute top-0 left-0 w-64 h-64 bg-accent/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
+        
+        <div className="relative z-10">
+          <Link href="/" className="flex items-center gap-2 mb-8">
+            <div className="bg-white/10 p-2 rounded-lg backdrop-blur">
+              <Building2 className="h-6 w-6 text-accent" />
             </div>
+            <span className="text-2xl font-playfair font-bold text-white tracking-wide">
+              ExpenseFlow
+            </span>
+          </Link>
 
+          <h2 className="text-3xl lg:text-4xl font-playfair font-semibold italic text-white mb-6 leading-tight">
+            Seamless Expense Tracking for Teams
+          </h2>
+          <p className="text-white/80 font-light leading-relaxed mb-8">
+            Automate claims processing, customize sequential approval workflows, and gain clear financial insights in real-time.
+          </p>
+
+          <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-5 mt-6">
+            <h3 className="text-sm font-semibold text-accent mb-2 uppercase tracking-wider">Quick Demo Roles</h3>
+            <p className="text-xs text-white/70 mb-4">Click any profile below to auto-fill credentials for testing:</p>
+            <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-1">
+              {DEMO_CREDENTIALS.map((account) => (
+                <button
+                  key={account.email}
+                  type="button"
+                  onClick={() => applyDemoCredentials(account.email)}
+                  disabled={loading}
+                  className="flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-accent/40 rounded-xl text-left transition-all duration-200 group"
+                >
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-white group-hover:text-accent transition-colors">{account.label}</span>
+                    <span className="text-xs text-white/50">{account.email}</span>
+                  </div>
+                  <span className="text-xs px-2.5 py-0.5 bg-accent/20 text-accent rounded-full font-medium">
+                    {account.role}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="text-[11px] text-white/40 mt-4 text-center">
+              Universal Demo Password: <span className="font-semibold text-accent">{DEMO_PASSWORD}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 text-xs text-white/50 border-t border-white/10 pt-4">
+          © {new Date().getFullYear()} ExpenseFlow. All rights reserved.
+        </div>
+      </div>
+
+      {/* Right Panel: Login Form */}
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-secondary/10">
+        <Card className="w-full max-w-md bg-white dark:bg-card border border-border/80 shadow-2xl p-6 sm:p-8 rounded-2xl relative overflow-hidden">
+          {/* Logo for mobile view only */}
+          <div className="flex md:hidden justify-center mb-6">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="bg-accent/15 p-2 rounded-lg">
+                <Building2 className="h-6 w-6 text-accent" />
+              </div>
+              <span className="text-xl font-playfair font-bold text-primary">
+                ExpenseFlow
+              </span>
+            </Link>
+          </div>
+
+          <div className="mb-6 text-center md:text-left">
+            <h1 className="text-2xl font-bold text-foreground">Sign In</h1>
+            <p className="text-sm text-muted-foreground mt-1.5">
+              Enter your credentials to access the expense management system.
+            </p>
+          </div>
+
+          <form onSubmit={handleCredentialsLogin} className="space-y-5">
             {/* Error Message */}
             {error && (
-              <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
-                <AlertCircle className="h-4 w-4" />
-                <span className="text-sm">{error}</span>
+              <div className="flex items-start space-x-2 text-destructive bg-destructive/10 border border-destructive/20 p-3.5 rounded-xl">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <span className="text-sm font-medium">{error}</span>
               </div>
             )}
 
-            <div>
-              <Label htmlFor="companyId">Company ID *</Label>
-              <Input
-                id="companyId"
-                type="text"
-                value={formData.companyId}
-                onChange={(e) => handleInputChange('companyId', e.target.value)}
-                placeholder="Enter your company ID"
-                className={errors.companyId ? 'border-red-500' : ''}
-                autoComplete="organization"
-                disabled={loading}
-              />
-              {errors.companyId && (
-                <p className="text-red-500 text-sm mt-1">{errors.companyId}</p>
-              )}
-              <p className="text-xs text-gray-500 mt-1">
-                Don't have a company ID? Contact your admin or create a new company.
-              </p>
-            </div>
-            
-            <div>
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="Enter your email"
-                className={errors.email ? 'border-red-500' : ''}
-                autoComplete="email"
-                disabled={loading}
-              />
-              {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-              )}
-            </div>
-            
-            <div>
-              <Label htmlFor="password">Password *</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                  placeholder="Enter your password"
-                  className={errors.password ? 'border-red-500' : ''}
-                  autoComplete="current-password"
-                  disabled={loading}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                  onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
+            {/* Inputs */}
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="companyId" className="text-foreground/80 font-medium">Company ID *</Label>
+                <div className="relative">
+                  <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="companyId"
+                    type="text"
+                    value={formData.companyId}
+                    onChange={(e) => handleInputChange('companyId', e.target.value)}
+                    placeholder="Enter your company ID"
+                    className={`pl-10 bg-white dark:bg-background ${errors.companyId ? 'border-destructive' : ''}`}
+                    autoComplete="organization"
+                    disabled={loading}
+                    required
+                  />
+                </div>
+                {errors.companyId && (
+                  <p className="text-destructive text-xs mt-1">{errors.companyId}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-red-500 text-sm mt-1">{errors.password}</p>
-              )}
+
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-foreground/80 font-medium">Email Address *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="name@company.com"
+                    className={`pl-10 bg-white dark:bg-background ${errors.email ? 'border-destructive' : ''}`}
+                    autoComplete="email"
+                    disabled={loading}
+                    required
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-destructive text-xs mt-1">{errors.email}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="password" className="text-foreground/80 font-medium">Password *</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    placeholder="••••••••"
+                    className={`pl-10 pr-10 bg-white dark:bg-background ${errors.password ? 'border-destructive' : ''}`}
+                    autoComplete="current-password"
+                    disabled={loading}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-destructive text-xs mt-1">{errors.password}</p>
+                )}
+              </div>
             </div>
-          </CardContent>
-          
-          <CardFooter className="flex flex-col space-y-4">
-            <Button 
-              type="submit" 
-              className="w-full" 
+
+            <Button
+              type="submit"
+              className="w-full bg-accent hover:bg-accent/90 text-white font-semibold py-6 rounded-xl transition-all duration-200"
               disabled={loading}
             >
               {loading ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <Loader2 className="animate-spin h-5 w-5 mr-2" />
                   Signing In...
                 </>
               ) : (
                 'Sign In'
               )}
             </Button>
-            
-            <div className="text-center space-y-4">
-              <div className="border-t pt-4">
-                <p className="text-sm text-gray-600 mb-3">
-                  Don't have a company account yet?
+
+            {/* Mobile-only collapsible Quick Demo Roles */}
+            <div className="md:hidden border-t pt-4">
+              <details className="group">
+                <summary className="list-none flex items-center justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer select-none">
+                  <span>Show Demo Logins</span>
+                  <span className="transition-transform group-open:rotate-180">▼</span>
+                </summary>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                  {DEMO_CREDENTIALS.map((account) => (
+                    <button
+                      key={account.email}
+                      type="button"
+                      onClick={() => applyDemoCredentials(account.email)}
+                      disabled={loading}
+                      className="flex items-center justify-between p-2.5 bg-muted/40 hover:bg-muted/80 border rounded-xl text-left transition-all text-xs"
+                    >
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-foreground">{account.label}</span>
+                        <span className="text-[10px] text-muted-foreground">{account.email}</span>
+                      </div>
+                      <Badge variant="outline" className="text-[9px] scale-90 whitespace-nowrap">
+                        {account.role}
+                      </Badge>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground text-center mt-3 bg-muted/30 p-2 rounded-lg">
+                  Universal Demo Password: <span className="font-semibold text-foreground">{DEMO_PASSWORD}</span>
                 </p>
-                <Link href="/onboard">
-                  <Button variant="outline" className="w-full">
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Create New Company
-                  </Button>
-                </Link>
-                <p className="text-xs text-gray-500 mt-2">
-                  Set up your company's expense management system
-                </p>
-              </div>
-              
-              <div className="border-t pt-4">
-                <p className="text-xs text-gray-500">
-                  Individual employees cannot register directly.<br/>
-                  Contact your company admin for account access.
-                </p>
-              </div>
+              </details>
             </div>
-          </CardFooter>
-        </form>
-      </Card>
+
+            {/* Bottom Actions */}
+            <div className="border-t border-border/80 pt-4 text-center space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Don't have a company account yet?
+              </p>
+              <Link href="/onboard" className="block">
+                <Button variant="outline" className="w-full py-5 rounded-xl bg-white dark:bg-background border-accent/20 text-accent hover:bg-accent/5">
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Create New Company
+                </Button>
+              </Link>
+              <p className="text-[10px] text-muted-foreground">
+                Individual employees cannot register directly. <br />
+                Contact your company administrator for access.
+              </p>
+            </div>
+          </form>
+        </Card>
+      </div>
     </div>
   )
-}
+}

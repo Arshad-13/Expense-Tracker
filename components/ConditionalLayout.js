@@ -8,7 +8,7 @@ export default function ConditionalLayout({ children }) {
   const pathname = usePathname()
   
   // Pages that should not have navbar and footer
-  const excludeNavFooterPages = ['/auth/login', '/onboard']
+  const excludeNavFooterPages = ['/auth/login', '/onboard', '/dashboard', '/admin', '/approval', '/employee', '/expense']
   
   // Check if current path should exclude nav/footer
   const shouldExcludeNavFooter = excludeNavFooterPages.some(page => 

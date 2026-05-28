@@ -14,7 +14,7 @@ export async function DELETE(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
 
     // Delete the employee
     await prisma.user.delete({
@@ -45,7 +45,7 @@ export async function PUT(request, { params }) {
       )
     }
 
-    const { id } = params
+    const { id } = await params
     const { name, email, role, managerId } = await request.json()
 
     if (!name || !email || !role) {
