@@ -1,68 +1,73 @@
-// 'use server';
+'use server';
 
-// import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { approvalWorkflowService } from '@/lib/approval-workflow';
 
-// /**
-//  * Server action to save expense data to draft
-//  * @param {Object} expenseData - The expense data to save
-//  * @returns {Promise<Object>} - Result with success/error status
-//  */
-// export async function saveToDraft(expenseData) {
-//   try {
-//     console.log('Saving expense to draft:', expenseData);
+/**
+ * Server action to save expense data to draft (initiates sequential approval workflow)
+ * @param {Object} expenseData - The expense data to save
+ * @returns {Promise<Object>} - Result with success/error status
+ */
+export async function saveToDraft(expenseData) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user?.id || !session.user?.companyId) {
+      return {
+        success: false,
+        message: 'Unauthorized. Please log in.'
+      };
+    }
 
-//     // Validate required fields
-//     const { date, total, currency, currencySymbol, category, lineItems } = expenseData;
+    console.log('Saving expense via server action:', expenseData);
+
+    const { date, total, currency, category, lineItems, description } = expenseData;
     
-//     if (!date || !total || !currency || !currencySymbol) {
-//       return {
-//         success: false,
-//         message: 'Missing required fields: date, total, currency, or currencySymbol'
-//       };
-//     }
+    if (!date || !total || !currency) {
+      return {
+        success: false,
+        message: 'Missing required fields: date, amount, or currency'
+      };
+    }
 
-//     // Parse total as float to validate
-//     const totalAmount = parseFloat(total);
-//     if (isNaN(totalAmount)) {
-//       return {
-//         success: false,
-//         message: 'Invalid total amount'
-//       };
-//     }
+    const totalAmount = parseFloat(total);
+    if (isNaN(totalAmount) || totalAmount <= 0) {
+      return {
+        success: false,
+        message: 'Invalid amount'
+      };
+    }
 
-//     // TODO: Replace with actual Prisma create operation
-//     const draftExpense = await prisma.expense.create({
-//       data: {
-//         date,
-//         total: totalAmount,
-//         currency,
-//         currencySymbol,
-//         category: category || 'General',
-//         lineItems: lineItems || [],
-//         status: 'PENDING'
-//       }
-//     });
+    const isManager = session.user.role === 'MANAGER';
 
-//     console.log('Expense saved successfully to draft');
+    // Submit expense using the approval workflow engine
+    const expense = await approvalWorkflowService.submitExpense(
+      {
+        amount: totalAmount,
+        currency: currency.trim(),
+        category: category || 'General',
+        description: description || null,
+        date: new Date(date),
+        isManager,
+        items: lineItems || undefined,
+      },
+      session.user.id
+    );
 
-//     return {
-//       success: true,
-//       message: 'Expense saved to draft successfully!',
-//       expense: draftExpense
-//     };
+    console.log('Expense saved and workflow initialized:', expense.id);
 
-//   } catch (error) {
-//     console.error('Error saving expense to draft:', error);
-//     return {
-//       success: false,
-//       message: 'Failed to save expense to draft. Please try again.',
-//       error: process.env.NODE_ENV === 'development' ? error.message : undefined
-//     };
-//   }
-// }
-//       success: false,
-//       message: 'Failed to save expense to draft. Please try again.',
-//       error: process.env.NODE_ENV === 'development' ? error.message : undefined
-//     };
-//   }
-// }
+    return {
+      success: true,
+      message: 'Expense submitted successfully!',
+      expense
+    };
+
+  } catch (error) {
+    console.error('Error saving expense:', error);
+    return {
+      success: false,
+      message: 'Failed to submit expense. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    };
+  }
+}

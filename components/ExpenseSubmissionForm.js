@@ -41,6 +41,15 @@ export default function ExpenseSubmissionForm() {
     receiptFile: null,
     isManager: false
   })
+
+  useEffect(() => {
+    if (session?.user?.role) {
+      setFormData(prev => ({
+        ...prev,
+        isManager: session.user.role === 'MANAGER'
+      }))
+    }
+  }, [session])
   
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
@@ -301,20 +310,6 @@ export default function ExpenseSubmissionForm() {
             {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
           </div>
 
-          {/* Is Manager Checkbox */}
-          <div className="flex items-center space-x-2">
-            <input
-              id="isManager"
-              type="checkbox"
-              checked={formData.isManager}
-              onChange={(e) => handleInputChange('isManager', e.target.checked)}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <Label htmlFor="isManager" className="text-sm cursor-pointer">
-              I am a manager
-            </Label>
-          </div>
-          
           {/* Information about approval workflow */}
           <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
             <p className="text-sm text-gray-700">

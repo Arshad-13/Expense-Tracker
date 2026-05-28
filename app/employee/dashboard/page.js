@@ -7,12 +7,13 @@ import ExpenseSubmissionForm from '@/components/ExpenseSubmissionForm'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { User, Mail, Calendar, Settings } from 'lucide-react'
+import { User, Mail, Calendar, Settings, FileText } from 'lucide-react'
 
 function EmployeeDashboardClient() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [recentExpenses, setRecentExpenses] = useState([])
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -44,7 +45,21 @@ function EmployeeDashboardClient() {
       }
     }
 
+    // Fetch user profile details
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch('/api/user/profile')
+        if (response.ok) {
+          const data = await response.json()
+          setProfile(data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch user profile:', error)
+      }
+    }
+
     fetchRecentExpenses()
+    fetchProfile()
   }, [session, status, router])
 
   if (status === 'loading' || loading) {
@@ -106,7 +121,9 @@ function EmployeeDashboardClient() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Today</div>
+              <div className="text-2xl font-bold">
+                {profile?.createdAt ? new Date(profile.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Today'}
+              </div>
               <p className="text-xs text-muted-foreground">Welcome to the platform!</p>
             </CardContent>
           </Card>
@@ -128,9 +145,9 @@ function EmployeeDashboardClient() {
                 <Calendar className="h-8 w-8 mb-2" />
                 <span>View Calendar</span>
               </Button>
-              <Button variant="outline" className="h-auto p-4 flex flex-col items-center">
-                <Mail className="h-8 w-8 mb-2" />
-                <span>Messages</span>
+              <Button variant="outline" className="h-auto p-4 flex flex-col items-center" onClick={() => document.getElementById('submit-expense-section')?.scrollIntoView({ behavior: 'smooth' })}>
+                <FileText className="h-8 w-8 mb-2" />
+                <span>Submit Expense</span>
               </Button>
               <Button variant="outline" className="h-auto p-4 flex flex-col items-center" onClick={() => alert('Messages feature coming soon!')}>
                 <Mail className="h-8 w-8 mb-2" />
@@ -141,7 +158,7 @@ function EmployeeDashboardClient() {
         </Card>
 
         {/* Submit Expense - embeds existing form component */}
-        <div className="mb-8">
+        <div id="submit-expense-section" className="mb-8">
           <ExpenseSubmissionForm />
         </div>
 

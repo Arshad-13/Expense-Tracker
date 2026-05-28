@@ -36,7 +36,7 @@ export async function POST(request) {
     const verificationCode = generateVerificationCode()
     
     // Store verification data temporarily (expires in 10 minutes)
-    setVerificationData(email, {
+    await setVerificationData(email, {
       code: verificationCode,
       companyName,
       password,

@@ -17,7 +17,7 @@ export async function POST(request) {
     }
 
     // Get stored verification data
-    const storedData = getVerificationData(email)
+    const storedData = await getVerificationData(email)
 
     if (!storedData) {
       return NextResponse.json(
@@ -28,7 +28,7 @@ export async function POST(request) {
 
     // Check if code expired
     if (Date.now() > storedData.expiresAt) {
-      deleteVerificationData(email)
+      await deleteVerificationData(email)
       return NextResponse.json(
         { error: 'Verification code has expired' },
         { status: 400 }
@@ -91,7 +91,7 @@ export async function POST(request) {
     })
 
     // Clear verification data
-    deleteVerificationData(email)
+    await deleteVerificationData(email)
 
     // Send company ID email
     await sendCompanyIdEmail(email, storedData.companyName, companyId)

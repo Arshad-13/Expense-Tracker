@@ -336,3 +336,13 @@ model Session {
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model VerificationToken {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  code        String
+  companyName String
+  password    String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}

@@ -160,10 +160,12 @@ ${rawOcrText}`;
     
     console.log(jsonText);
     try {
-        parsedData = JSON.parse(jsonText);
-    }
-    catch (err) {
-        parsedData = JSON.parse(jsonText.slice(7, jsonText.length-3));
+      const jsonMatch = jsonText.match(/```json\s*([\s\S]*?)\s*```/) || jsonText.match(/```\s*([\s\S]*?)\s*```/);
+      const cleanJson = jsonMatch ? jsonMatch[1].trim() : jsonText;
+      parsedData = JSON.parse(cleanJson);
+    } catch (err) {
+      console.error("Failed to parse Gemini JSON response:", err, jsonText);
+      parsedData = { total_amount: '', transaction_date: '', category: 'General', line_items: [] };
     }
     // Ensure we have the right structure with fallbacks
     const data = {

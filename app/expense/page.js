@@ -153,33 +153,28 @@ function ScanButton() {
   );
 }
 
+const FALLBACK_CURRENCIES = [
+  { code: 'USD', symbol: '$', name: 'United States dollar' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British pound' },
+  { code: 'INR', symbol: '₹', name: 'Indian rupee' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese yen' },
+  { code: 'CAD', symbol: '$', name: 'Canadian dollar' },
+];
+
 export default function ExpensePage() {
   // State for the manual form fields
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [total, setTotal] = useState('');
   const [category, setCategory] = useState('General');
   const [currency, setCurrency] = useState('USD');
-  const [currencies, setCurrencies] = useState([]);
+  const [currencies, setCurrencies] = useState(FALLBACK_CURRENCIES);
   const [lineItems, setLineItems] = useState([
     { itemName: '', quantity: 1, price: '' },
   ]);
   
   // Get current currency symbol
   const currentCurrency = currencies.find(c => c.code === currency);
-
-  // Load initial currencies for fallback
-  useEffect(() => {
-    if (currencies.length === 0) {
-      setCurrencies([
-        { code: 'USD', symbol: '$', name: 'United States dollar' },
-        { code: 'EUR', symbol: '€', name: 'Euro' },
-        { code: 'GBP', symbol: '£', name: 'British pound' },
-        { code: 'INR', symbol: '₹', name: 'Indian rupee' },
-        { code: 'JPY', symbol: '¥', name: 'Japanese yen' },
-        { code: 'CAD', symbol: '$', name: 'Canadian dollar' },
-      ]);
-    }
-  }, [currencies]);
 
   // useFormState hook to manage the Server Action for OCR
   const initialState = { status: null, message: null, data: null };

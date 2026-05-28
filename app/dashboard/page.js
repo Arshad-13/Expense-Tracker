@@ -68,9 +68,24 @@ export default async function Dashboard() {
   }
 
   const companyId = session.user.companyId
-  const [expenses, pendingCount, approvedCount, rejectedCount] = await Promise.all([
+  const role = session.user.role
+
+  // Role-based filtering for expenses
+  let expenseWhere = { companyId }
+  if (role === 'EMPLOYEE') {
+    expenseWhere.submittedById = session.user.id
+  } else if (role === 'MANAGER') {
+    const teamMembers = await prisma.employeeManager.findMany({
+      where: { managerId: session.user.id },
+      select: { employeeId: true }
+    })
+    const teamMemberIds = teamMembers.map(tm => tm.employeeId)
+    expenseWhere.submittedById = { in: [...teamMemberIds, session.user.id] }
+  }
+
+  const [expenses, pendingCount, approvedCount, rejectedCount, dbUser] = await Promise.all([
     prisma.expense.findMany({
-      where: { companyId },
+      where: expenseWhere,
       orderBy: { date: 'desc' },
       take: 5,
       select: {
@@ -83,9 +98,13 @@ export default async function Dashboard() {
         status: true,
       },
     }),
-    prisma.expense.count({ where: { companyId, status: { in: ['PENDING', 'IN_PROGRESS'] } } }),
-    prisma.expense.count({ where: { companyId, status: { in: ['APPROVED', 'AUTO_APPROVED'] } } }),
-    prisma.expense.count({ where: { companyId, status: 'REJECTED' } }),
+    prisma.expense.count({ where: { ...expenseWhere, status: { in: ['PENDING', 'IN_PROGRESS'] } } }),
+    prisma.expense.count({ where: { ...expenseWhere, status: { in: ['APPROVED', 'AUTO_APPROVED'] } } }),
+    prisma.expense.count({ where: { ...expenseWhere, status: 'REJECTED' } }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { createdAt: true }
+    })
   ])
 
   const tiles = roleTiles[session.user.role] || roleTiles.EMPLOYEE
@@ -174,7 +193,9 @@ export default async function Dashboard() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">Today</div>
+              <div className="text-2xl font-bold">
+                {dbUser?.createdAt ? new Date(dbUser.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Today'}
+              </div>
               <p className="text-xs text-muted-foreground">Welcome to the platform!</p>
             </CardContent>
           </Card>

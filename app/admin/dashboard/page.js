@@ -48,6 +48,9 @@ function AdminDashboardClient() {
     managerId: '',
   })
 
+  const [editingEmployee, setEditingEmployee] = useState(null)
+  const [roleFilter, setRoleFilter] = useState('ALL')
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/company/login')
@@ -121,41 +124,82 @@ function AdminDashboardClient() {
     }
   }
 
-  const handleDeleteEmployee = async (employeeId) => {
-    if (!confirm('Are you sure you want to remove this employee?')) return
+  const handleEditEmployee = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    setMessage({ type: '', text: '' })
 
     try {
-      const response = await fetch(`/api/admin/employees/${employeeId}`, {
-        method: 'DELETE',
+      const response = await fetch(`/api/admin/employees/${editingEmployee.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editingEmployee.name,
+          email: editingEmployee.email,
+          role: editingEmployee.role,
+          managerId: editingEmployee.managerId || '',
+        }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error('Failed to delete employee')
+        throw new Error(data.error || 'Failed to update employee')
       }
 
-      setMessage({ type: 'success', text: 'Employee removed successfully' })
+      setMessage({ type: 'success', text: 'Employee updated successfully!' })
+      setEditingEmployee(null)
       fetchEmployees()
     } catch (error) {
       setMessage({ type: 'error', text: error.message })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const filteredEmployees = employees.filter(emp =>
-    emp.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    emp.role?.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const handleExport = () => {
+    if (filteredEmployees.length === 0) return
+    const headers = ['Name', 'Email', 'Role', 'Manager']
+    const rows = filteredEmployees.map(emp => [
+      emp.name || 'No Name',
+      emp.email,
+      emp.role,
+      emp.managerName || 'No Manager'
+    ])
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(','), ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(','))].join('\n')
+    const encodedUri = encodeURI(csvContent)
+    const link = document.createElement("a")
+    link.setAttribute("href", encodedUri)
+    link.setAttribute("download", `employees_${new Date().toISOString().split('T')[0]}.csv`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const filteredEmployees = employees.filter(emp => {
+    const matchesSearch = 
+      emp.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      emp.role?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = roleFilter === 'ALL' || emp.role === roleFilter;
+    return matchesSearch && matchesRole;
+  })
 
   const getRoleBadgeColor = (role) => {
     switch (role) {
       case 'ADMIN':
-        return 'bg-accent/20 text-accent border-accent/30'
+        return 'bg-red-500/20 text-red-500 border-red-500/30'
       case 'MANAGER':
-        return 'bg-primary/20 text-primary border-primary/30'
-      case 'APPROVER':
-        return 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+        return 'bg-amber-500/20 text-amber-500 border-amber-500/30'
+      case 'FINANCE':
+        return 'bg-emerald-500/20 text-emerald-500 border-emerald-500/30'
+      case 'DIRECTOR':
+        return 'bg-indigo-500/20 text-indigo-500 border-indigo-500/30'
+      case 'EMPLOYEE':
+        return 'bg-blue-500/20 text-blue-500 border-blue-500/30'
       default:
-        return 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+        return 'bg-gray-500/20 text-gray-500 border-gray-500/30'
     }
   }
 
@@ -284,11 +328,26 @@ function AdminDashboardClient() {
                   className="pl-10"
                 />
               </div>
-              <Button variant="outline" className="sm:w-auto">
-                <Filter className="mr-2 h-4 w-4" />
-                Filter
-              </Button>
-              <Button variant="outline" className="sm:w-auto">
+              <div className="w-full sm:w-[180px]">
+                <Select
+                  value={roleFilter}
+                  onValueChange={setRoleFilter}
+                >
+                  <SelectTrigger className="w-full bg-white dark:bg-background">
+                    <Filter className="mr-2 h-4 w-4" />
+                    <SelectValue placeholder="All Roles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL">All Roles</SelectItem>
+                    <SelectItem value="EMPLOYEE">Employee</SelectItem>
+                    <SelectItem value="MANAGER">Manager</SelectItem>
+                    <SelectItem value="FINANCE">Finance</SelectItem>
+                    <SelectItem value="DIRECTOR">Director</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="outline" className="sm:w-auto bg-white dark:bg-background" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
@@ -383,6 +442,13 @@ function AdminDashboardClient() {
                           <Button
                             size="sm"
                             variant="ghost"
+                            onClick={() => setEditingEmployee({
+                              id: employee.id,
+                              name: employee.name,
+                              email: employee.email,
+                              role: employee.role,
+                              managerId: employee.managerId || ''
+                            })}
                             className="text-muted-foreground hover:text-foreground"
                           >
                             <Edit className="h-4 w-4" />
@@ -458,7 +524,9 @@ function AdminDashboardClient() {
                   <SelectContent>
                     <SelectItem value="EMPLOYEE">Employee</SelectItem>
                     <SelectItem value="MANAGER">Manager</SelectItem>
-                    <SelectItem value="APPROVER">Approver</SelectItem>
+                    <SelectItem value="FINANCE">Finance</SelectItem>
+                    <SelectItem value="DIRECTOR">Director</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -504,6 +572,114 @@ function AdminDashboardClient() {
                     </>
                   ) : (
                     'Add Employee'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Edit Employee Modal */}
+      {editingEmployee && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md bg-white dark:bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-playfair text-2xl font-bold text-foreground">Edit Employee</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingEmployee(null)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <XCircle className="h-5 w-5" />
+              </Button>
+            </div>
+
+            <form onSubmit={handleEditEmployee} className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editingEmployee.name || ''}
+                  onChange={(e) => setEditingEmployee({ ...editingEmployee, name: e.target.value })}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editingEmployee.email}
+                  onChange={(e) => setEditingEmployee({ ...editingEmployee, email: e.target.value })}
+                  placeholder="john@company.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-role">Role</Label>
+                <Select
+                  value={editingEmployee.role}
+                  onValueChange={(value) => setEditingEmployee({ ...editingEmployee, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EMPLOYEE">Employee</SelectItem>
+                    <SelectItem value="MANAGER">Manager</SelectItem>
+                    <SelectItem value="FINANCE">Finance</SelectItem>
+                    <SelectItem value="DIRECTOR">Director</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-manager">Assign Manager (Optional)</Label>
+                <Select
+                  value={editingEmployee.managerId || 'none'}
+                  onValueChange={(value) => setEditingEmployee({ ...editingEmployee, managerId: value === 'none' ? '' : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Manager</SelectItem>
+                    {managers.filter(m => m.id !== editingEmployee.id).map((manager) => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {manager.name} ({manager.email})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingEmployee(null)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="flex-1 bg-accent hover:bg-accent/90 text-white"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
                   )}
                 </Button>
               </div>
